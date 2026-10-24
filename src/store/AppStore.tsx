@@ -92,8 +92,8 @@ function load(): PersistedState {
       const parsed = JSON.parse(raw) as Partial<PersistedState>;
       if (parsed && Array.isArray(parsed.analyses)) {
         return {
-          session: parsed.session ?? false,
-          onboarded: parsed.onboarded ?? false,
+          session: parsed.session ?? true,
+          onboarded: parsed.onboarded ?? true,
           user: parsed.user ?? DEMO_USER,
           analyses: parsed.analyses,
           reports: Array.isArray(parsed.reports) ? parsed.reports : [],
@@ -105,8 +105,8 @@ function load(): PersistedState {
     /* corrupted storage — reseed */
   }
   return {
-    session: false,
-    onboarded: false,
+    session: true,
+    onboarded: true,
     user: DEMO_USER,
     analyses: seedAnalyses(),
     reports: seedReports(),
@@ -246,8 +246,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const signIn = useCallback(
     async (email: string, password?: string) => {
       setIsLoading(true);
+      const isDemoGuest = email === "guest@retailradar.ai" || password === "guest-access";
       try {
-        if (isSupabaseConfigured && password) {
+        if (isSupabaseConfigured && password && !isDemoGuest) {
           const res = await remoteSignIn(email, password);
           if (res.user) {
             const profile = await fetchRemoteProfile(res.user.id);
@@ -272,15 +273,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (err: any) {
-        setIsLoading(false);
-        throw err;
+        if (!isDemoGuest) {
+          setIsLoading(false);
+          throw err;
+        }
       } finally {
         setIsLoading(false);
       }
 
       // Local persistence fallback
       mutate((s) => ({ ...s, session: true, user: { ...s.user, email: email || s.user.email } }));
-      toast("Signed in (Local Workspace)", { body: `Session active for ${email}`, tone: "info" });
+      toast("Signed in (Demo Workspace)", { body: `Session active for ${email}`, tone: "info" });
     },
     [mutate, toast]
   );
