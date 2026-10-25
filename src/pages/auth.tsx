@@ -1,9 +1,32 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Database, Info, KeyRound, MailCheck, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Database, Info, KeyRound, MailCheck, ShieldAlert } from "lucide-react";
 import { Button, Field, InlineNote, Input } from "../components/ui";
 import { Wordmark } from "../components/chrome";
 import { useApp } from "../store/AppStore";
+
+export function GoogleIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.15z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.27v3.15C3.25 21.36 7.35 24 12 24z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.27C.46 8.2 0 10.05 0 12c0 1.95.46 3.8 1.27 5.42l4.01-3.15z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.25 2.64 1.27 6.58l4.01 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+      />
+    </svg>
+  );
+}
 
 function AuthShell({ title, sub, children }: { title: string; sub: string; children: React.ReactNode }) {
   const { isCloudConnected } = useApp();
@@ -29,24 +52,24 @@ function AuthShell({ title, sub, children }: { title: string; sub: string; child
               className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
                 isCloudConnected
                   ? "border border-sage-500/30 bg-sage-500/10 text-sage-300"
-                  : "border border-brass-500/30 bg-brass-500/10 text-brass-300"
+                  : "border border-amber-500/30 bg-amber-500/10 text-amber-300"
               }`}
             >
               <Database size={11} />
-              {isCloudConnected ? "Supabase Cloud DB Connected" : "Local Database Mode"}
+              {isCloudConnected ? "Supabase PostgreSQL Connected" : "Supabase Keys Required"}
             </span>
           </div>
 
           <h1 className="font-display text-[26px] font-light tracking-tight text-bone-100">{title}</h1>
           <p className="mt-2 text-[13.5px] leading-relaxed text-bone-400">{sub}</p>
-          <div className="mt-7">{children}</div>
+          <div className="mt-6">{children}</div>
         </div>
 
         <p className="mt-5 flex items-start gap-2 text-[12px] leading-relaxed text-bone-500">
           <Info size={13} className="mt-0.5 shrink-0" />
           {isCloudConnected
-            ? "Connected to real Supabase PostgreSQL with Row Level Security. Data is authenticated and isolated by user."
-            : "Running in local persistent database mode. Add your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env to enable cloud synchronization."}
+            ? "Protected by Supabase Auth and Row Level Security. User identities and workspaces are persisted in PostgreSQL."
+            : "Add your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your deployment environment variables to activate cloud authentication."}
         </p>
       </div>
     </main>
@@ -55,18 +78,44 @@ function AuthShell({ title, sub, children }: { title: string; sub: string; child
 
 export function SignInPage() {
   const nav = useNavigate();
-  const { signIn } = useApp();
-  const [email, setEmail] = useState("amara@kaasara.in");
-  const [password, setPassword] = useState("password123");
+  const { signIn, signInWithGoogle, isCloudConnected } = useApp();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ email?: string; password?: string; general?: string }>({});
   const [busy, setBusy] = useState(false);
+  const [busyGoogle, setBusyGoogle] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    setErrors({});
+    if (!isCloudConnected) {
+      setErrors({
+        general: "Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
+      });
+      return;
+    }
+    setBusyGoogle(true);
+    try {
+      await signInWithGoogle();
+      // Supabase redirects to Google OAuth
+    } catch (err: any) {
+      setErrors({ general: err.message || "Failed to initiate Google Sign-in. Please try again." });
+      setBusyGoogle(false);
+    }
+  };
 
   const submit = async () => {
     const e: typeof errors = {};
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Enter a valid email address";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) e.email = "Enter a valid work email address";
     if (password.length < 6) e.password = "Password must be at least 6 characters";
     setErrors(e);
     if (Object.keys(e).length) return;
+
+    if (!isCloudConnected) {
+      setErrors({
+        general: "Supabase credentials are required. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to sign in.",
+      });
+      return;
+    }
 
     setBusy(true);
     try {
@@ -80,13 +129,37 @@ export function SignInPage() {
   };
 
   return (
-    <AuthShell title="Welcome back" sub="Sign in to your retail location workspace.">
+    <AuthShell title="Sign in" sub="Access your secure retail location intelligence workspace.">
       <div className="space-y-4">
         {errors.general && (
-          <div className="rounded-lg border border-ember-500/30 bg-ember-500/10 p-3 text-[12.5px] text-ember-300">
-            {errors.general}
+          <div className="flex items-start gap-2.5 rounded-lg border border-ember-500/30 bg-ember-500/10 p-3 text-[12.5px] text-ember-300">
+            <ShieldAlert size={15} className="mt-0.5 shrink-0" />
+            <span>{errors.general}</span>
           </div>
         )}
+
+        {/* Google OAuth Button */}
+        <button
+          type="button"
+          disabled={busyGoogle || busy}
+          onClick={handleGoogleSignIn}
+          className="flex w-full items-center justify-center gap-3 rounded-lg border border-line-strong bg-ink-800/90 px-4 py-3 text-[13.5px] font-medium text-bone-100 shadow-sm transition-all hover:border-bone-400 hover:bg-ink-750 active:scale-[0.99] disabled:opacity-60"
+        >
+          {busyGoogle ? (
+            <span className="size-4 animate-spin rounded-full border-2 border-bone-100 border-t-transparent" />
+          ) : (
+            <GoogleIcon className="size-4" />
+          )}
+          <span>{busyGoogle ? "Redirecting to Google..." : "Continue with Google"}</span>
+        </button>
+
+        {/* Divider */}
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="w-full border-t border-line-subtle" />
+          <span className="bg-ink-850 px-3 text-[10.5px] font-mono uppercase tracking-wider text-bone-500">
+            Or sign in with email
+          </span>
+        </div>
 
         <Field label="Work email" error={errors.email}>
           <Input
@@ -94,6 +167,7 @@ export function SignInPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             invalid={!!errors.email}
+            placeholder="you@retailbrand.com"
             autoComplete="email"
           />
         </Field>
@@ -118,16 +192,6 @@ export function SignInPage() {
         <Button className="w-full" size="lg" loading={busy} onClick={submit}>
           Sign in <ArrowRight size={15} />
         </Button>
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={async () => {
-            await signIn("guest@retailradar.ai", "guest-access");
-            nav("/app");
-          }}
-        >
-          <ShieldCheck size={15} className="text-brass-400" /> Quick demo exploration
-        </Button>
       </div>
     </AuthShell>
   );
@@ -135,10 +199,29 @@ export function SignInPage() {
 
 export function CreateAccountPage() {
   const nav = useNavigate();
-  const { signUp } = useApp();
+  const { signUp, signInWithGoogle, isCloudConnected } = useApp();
   const [form, setForm] = useState({ name: "", email: "", org: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [busyGoogle, setBusyGoogle] = useState(false);
+
+  const handleGoogleSignUp = async () => {
+    setErrors({});
+    if (!isCloudConnected) {
+      setErrors({
+        general: "Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
+      });
+      return;
+    }
+    setBusyGoogle(true);
+    try {
+      await signInWithGoogle();
+      // Supabase redirects to Google OAuth
+    } catch (err: any) {
+      setErrors({ general: err.message || "Failed to initiate Google sign up." });
+      setBusyGoogle(false);
+    }
+  };
 
   const submit = async () => {
     const e: Record<string, string> = {};
@@ -148,10 +231,22 @@ export function CreateAccountPage() {
     setErrors(e);
     if (Object.keys(e).length) return;
 
+    if (!isCloudConnected) {
+      setErrors({
+        general: "Supabase credentials are required. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to register.",
+      });
+      return;
+    }
+
     setBusy(true);
     try {
-      await signUp(form.email, form.password, form.name, form.org);
-      nav("/app/onboarding");
+      const res = await signUp(form.email, form.password, form.name, form.org);
+      if (res?.session) {
+        nav("/app/onboarding");
+      } else {
+        // Email verification needed
+        nav("/sign-in");
+      }
     } catch (err: any) {
       setErrors({ general: err.message || "Failed to create account. Please try again." });
     } finally {
@@ -163,10 +258,34 @@ export function CreateAccountPage() {
     <AuthShell title="Create your account" sub="Set up your profile and start evaluating prime retail locations.">
       <div className="space-y-4">
         {errors.general && (
-          <div className="rounded-lg border border-ember-500/30 bg-ember-500/10 p-3 text-[12.5px] text-ember-300">
-            {errors.general}
+          <div className="flex items-start gap-2.5 rounded-lg border border-ember-500/30 bg-ember-500/10 p-3 text-[12.5px] text-ember-300">
+            <ShieldAlert size={15} className="mt-0.5 shrink-0" />
+            <span>{errors.general}</span>
           </div>
         )}
+
+        {/* Google OAuth Button */}
+        <button
+          type="button"
+          disabled={busyGoogle || busy}
+          onClick={handleGoogleSignUp}
+          className="flex w-full items-center justify-center gap-3 rounded-lg border border-line-strong bg-ink-800/90 px-4 py-3 text-[13.5px] font-medium text-bone-100 shadow-sm transition-all hover:border-bone-400 hover:bg-ink-750 active:scale-[0.99] disabled:opacity-60"
+        >
+          {busyGoogle ? (
+            <span className="size-4 animate-spin rounded-full border-2 border-bone-100 border-t-transparent" />
+          ) : (
+            <GoogleIcon className="size-4" />
+          )}
+          <span>{busyGoogle ? "Redirecting to Google..." : "Sign up with Google"}</span>
+        </button>
+
+        {/* Divider */}
+        <div className="relative my-4 flex items-center justify-center">
+          <div className="w-full border-t border-line-subtle" />
+          <span className="bg-ink-850 px-3 text-[10.5px] font-mono uppercase tracking-wider text-bone-500">
+            Or register with email
+          </span>
+        </div>
 
         <Field label="Full name" error={errors.name}>
           <Input
@@ -218,7 +337,7 @@ export function CreateAccountPage() {
 }
 
 export function ForgotPasswordPage() {
-  const { resetPassword, isCloudConnected } = useApp();
+  const { resetPassword } = useApp();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -276,9 +395,7 @@ export function ForgotPasswordPage() {
           <div>
             <p className="text-[14px] font-medium text-bone-100">Recovery link sent to {email}</p>
             <p className="mt-2 text-[12.5px] leading-relaxed text-bone-400">
-              {isCloudConnected
-                ? "Check your inbox for password reset instructions from Supabase Auth."
-                : "Recovery recorded in local storage mode. When Supabase is configured, a real reset email is dispatched."}
+              Check your inbox for password reset instructions from Supabase Auth.
             </p>
           </div>
           <InlineNote tone="info">

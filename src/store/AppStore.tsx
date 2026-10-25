@@ -11,12 +11,13 @@ import type {
   ScoringWeights,
 } from "../lib/types";
 import { DEFAULT_SCORING_WEIGHTS } from "../lib/types";
-import { seedAnalyses, seedReports, DEMO_USER } from "../data/seed";
+import { seedAnalyses, seedReports } from "../data/seed";
 import { uid } from "../lib/utils";
 import {
   isSupabaseConfigured,
   supabase,
   remoteSignIn,
+  remoteSignInWithGoogle,
   remoteSignUp,
   remoteSignOut,
   remoteResetPassword,
@@ -27,7 +28,7 @@ import {
   fetchRemoteReports,
   saveRemoteReport,
   deleteRemoteReport,
-  fetchRemoteProfile,
+  ensureRemoteProfile,
   updateRemoteProfile,
 } from "../lib/supabase";
 
@@ -54,12 +55,15 @@ interface AppStore extends PersistedState {
   isCloudConnected: boolean;
   isMapsConnected: boolean;
   isLoading: boolean;
+  isAuthReady: boolean;
   toast: (title: string, opts?: { body?: string; tone?: Toast["tone"] }) => void;
   dismissToast: (id: string) => void;
   signIn: (email: string, password?: string) => Promise<void>;
-  signUp: (email: string, password?: string, name?: string, org?: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signUp: (email: string, password?: string, name?: string, org?: string) => Promise<any>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  loadStarterSample: () => Promise<void>;
   completeOnboarding: () => void;
   resetOnboarding: () => void;
   updateUser: (patch: Partial<UserProfile>) => void;
@@ -92,9 +96,9 @@ function load(): PersistedState {
       const parsed = JSON.parse(raw) as Partial<PersistedState>;
       if (parsed && Array.isArray(parsed.analyses)) {
         return {
-          session: parsed.session ?? true,
-          onboarded: parsed.onboarded ?? true,
-          user: parsed.user ?? DEMO_USER,
+          session: false, // Security: Must be actively confirmed by Supabase auth
+          onboarded: parsed.onboarded ?? false,
+          user: parsed.user ?? { name: "", email: "", role: "Retail Entrepreneur", org: "Independent" },
           analyses: parsed.analyses,
           reports: Array.isArray(parsed.reports) ? parsed.reports : [],
           scoringWeights: parsed.scoringWeights ?? DEFAULT_SCORING_WEIGHTS,
@@ -102,14 +106,14 @@ function load(): PersistedState {
       }
     }
   } catch {
-    /* corrupted storage — reseed */
+    /* corrupted storage */
   }
   return {
-    session: true,
-    onboarded: true,
-    user: DEMO_USER,
-    analyses: seedAnalyses(),
-    reports: seedReports(),
+    session: false,
+    onboarded: false,
+    user: { name: "", email: "", role: "Retail Entrepreneur", org: "Independent" },
+    analyses: [],
+    reports: [],
     scoringWeights: DEFAULT_SCORING_WEIGHTS,
   };
 }
@@ -118,6 +122,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<PersistedState>(load);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isAuthReady, setIsAuthReady] = useState<boolean>(false);
 
   // Sync to local storage for offline resilience
   useEffect(() => {
@@ -144,15 +149,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Supabase Auth listener & session hydration
   useEffect(() => {
-    if (!isSupabaseConfigured || !supabase) return;
+    if (!isSupabaseConfigured || !supabase) {
+      setIsAuthReady(true);
+      return;
+    }
 
     let mounted = true;
 
     async function initAuth() {
       try {
         const session = await remoteGetSession();
-        if (session && session.user && mounted) {
-          const profile = await fetchRemoteProfile(session.user.id);
+        if (session?.user && mounted) {
+          const profile = await ensureRemoteProfile(session.user);
           const remoteAn = await fetchRemoteAnalyses(session.user.id);
           const remoteRep = await fetchRemoteReports(session.user.id);
 
@@ -161,17 +169,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             session: true,
             user: {
               id: session.user.id,
-              name: profile?.name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "User",
-              email: session.user.email || prev.user.email,
-              role: profile?.role || "Retail Entrepreneur",
-              org: profile?.org || "Independent",
+              name: profile.name,
+              email: profile.email,
+              avatarUrl: profile.avatarUrl,
+              role: profile.role,
+              org: profile.org,
             },
-            analyses: remoteAn.length > 0 ? remoteAn : prev.analyses,
-            reports: remoteRep.length > 0 ? remoteRep : prev.reports,
+            analyses: remoteAn,
+            reports: remoteRep,
+          }));
+        } else if (mounted) {
+          setState((prev) => ({
+            ...prev,
+            session: false,
+            user: { name: "", email: "", role: "Retail Entrepreneur", org: "Independent" },
           }));
         }
       } catch (e) {
-        console.warn("Session hydration notice:", e);
+        console.warn("Session verification notice:", e);
+      } finally {
+        if (mounted) setIsAuthReady(true);
       }
     }
 
@@ -179,8 +196,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-      if (session && session.user) {
-        const profile = await fetchRemoteProfile(session.user.id);
+      if (session?.user) {
+        const profile = await ensureRemoteProfile(session.user);
         const remoteAn = await fetchRemoteAnalyses(session.user.id);
         const remoteRep = await fetchRemoteReports(session.user.id);
 
@@ -189,16 +206,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           session: true,
           user: {
             id: session.user.id,
-            name: profile?.name || session.user.user_metadata?.name || session.user.email?.split("@")[0] || "User",
-            email: session.user.email || prev.user.email,
-            role: profile?.role || "Retail Entrepreneur",
-            org: profile?.org || "Independent",
+            name: profile.name,
+            email: profile.email,
+            avatarUrl: profile.avatarUrl,
+            role: profile.role,
+            org: profile.org,
           },
-          analyses: remoteAn.length > 0 ? remoteAn : prev.analyses,
-          reports: remoteRep.length > 0 ? remoteRep : prev.reports,
+          analyses: remoteAn,
+          reports: remoteRep,
         }));
+        setIsAuthReady(true);
       } else if (event === "SIGNED_OUT") {
-        setState((prev) => ({ ...prev, session: false }));
+        setState((prev) => ({
+          ...prev,
+          session: false,
+          user: { name: "", email: "", role: "Retail Entrepreneur", org: "Independent" },
+        }));
+        setIsAuthReady(true);
       }
     });
 
@@ -243,47 +267,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [mutate]
   );
 
+  const signInWithGoogle = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      if (!isSupabaseConfigured) {
+        throw new Error("Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables.");
+      }
+      await remoteSignInWithGoogle();
+      // Supabase redirects the browser to Google OAuth consent
+    } catch (err: any) {
+      setIsLoading(false);
+      throw err;
+    }
+  }, []);
+
   const signIn = useCallback(
     async (email: string, password?: string) => {
       setIsLoading(true);
-      const isDemoGuest = email === "guest@retailradar.ai" || password === "guest-access";
       try {
-        if (isSupabaseConfigured && password && !isDemoGuest) {
-          const res = await remoteSignIn(email, password);
-          if (res.user) {
-            const profile = await fetchRemoteProfile(res.user.id);
-            const remoteAn = await fetchRemoteAnalyses(res.user.id);
-            const remoteRep = await fetchRemoteReports(res.user.id);
+        if (!isSupabaseConfigured) {
+          throw new Error("Supabase is not configured. Please verify your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+        }
+        if (!password) {
+          throw new Error("Please enter your password.");
+        }
+        const res = await remoteSignIn(email, password);
+        if (res.user) {
+          const profile = await ensureRemoteProfile(res.user);
+          const remoteAn = await fetchRemoteAnalyses(res.user.id);
+          const remoteRep = await fetchRemoteReports(res.user.id);
 
-            mutate((s) => ({
-              ...s,
-              session: true,
-              user: {
-                id: res.user.id,
-                name: profile?.name || res.user.user_metadata?.name || email.split("@")[0],
-                email: res.user.email || email,
-                role: profile?.role || "Retail Entrepreneur",
-                org: profile?.org || "Independent",
-              },
-              analyses: remoteAn.length > 0 ? remoteAn : s.analyses,
-              reports: remoteRep.length > 0 ? remoteRep : s.reports,
-            }));
-            toast("Signed in to Supabase Cloud", { body: `Logged in as ${email}`, tone: "success" });
-            return;
-          }
+          mutate((s) => ({
+            ...s,
+            session: true,
+            user: {
+              id: res.user.id,
+              name: profile.name,
+              email: profile.email,
+              avatarUrl: profile.avatarUrl,
+              role: profile.role,
+              org: profile.org,
+            },
+            analyses: remoteAn,
+            reports: remoteRep,
+          }));
+          toast("Signed in to Supabase Cloud", { body: `Logged in as ${email}`, tone: "success" });
+          return;
         }
       } catch (err: any) {
-        if (!isDemoGuest) {
-          setIsLoading(false);
-          throw err;
-        }
+        setIsLoading(false);
+        throw err;
       } finally {
         setIsLoading(false);
       }
-
-      // Local persistence fallback
-      mutate((s) => ({ ...s, session: true, user: { ...s.user, email: email || s.user.email } }));
-      toast("Signed in (Demo Workspace)", { body: `Session active for ${email}`, tone: "info" });
     },
     [mutate, toast]
   );
@@ -292,23 +328,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     async (email: string, password?: string, name?: string, org?: string) => {
       setIsLoading(true);
       try {
-        if (isSupabaseConfigured && password) {
-          const res = await remoteSignUp(email, password, name || "Retail Explorer", org || "Independent");
-          if (res.user) {
-            mutate((s) => ({
-              ...s,
-              session: true,
-              user: {
-                id: res.user?.id,
-                name: name || email.split("@")[0],
-                email,
-                role: "Retail Entrepreneur",
-                org: org || "Independent",
-              },
-            }));
-            toast("Account created in Supabase", { body: "Your cloud database is connected.", tone: "success" });
-            return;
+        if (!isSupabaseConfigured) {
+          throw new Error("Supabase is not configured. Please verify your VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+        }
+        if (!password) {
+          throw new Error("Password is required.");
+        }
+        const res = await remoteSignUp(email, password, name || "Retail Explorer", org || "Independent");
+        if (res.user) {
+          const profile = await ensureRemoteProfile(res.user);
+          const hasSession = Boolean(res.session);
+
+          mutate((s) => ({
+            ...s,
+            session: hasSession,
+            user: {
+              id: res.user?.id,
+              name: profile.name,
+              email: profile.email,
+              avatarUrl: profile.avatarUrl,
+              role: profile.role,
+              org: profile.org,
+            },
+          }));
+
+          if (hasSession) {
+            toast("Account created in Supabase", { body: "Your profile is stored in the database.", tone: "success" });
+          } else {
+            toast("Verification email sent", {
+              body: "Please verify your email address to complete activation.",
+              tone: "info",
+            });
           }
+          return res;
         }
       } catch (err: any) {
         setIsLoading(false);
@@ -316,14 +368,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } finally {
         setIsLoading(false);
       }
-
-      // Local fallback
-      mutate((s) => ({
-        ...s,
-        session: true,
-        user: { ...s.user, name: name || s.user.name, email, org: org || s.user.org },
-      }));
-      toast("Account created locally", { body: "Welcome to RetailRadar AI.", tone: "success" });
     },
     [mutate, toast]
   );
@@ -336,24 +380,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.warn("Sign out remote warning:", e);
       }
     }
-    mutate((s) => ({ ...s, session: false }));
+    mutate((s) => ({
+      ...s,
+      session: false,
+      user: { name: "", email: "", role: "Retail Entrepreneur", org: "Independent" },
+    }));
     toast("Signed out", { tone: "info" });
   }, [mutate, toast]);
 
   const resetPassword = useCallback(
     async (email: string) => {
-      if (isSupabaseConfigured) {
-        await remoteResetPassword(email);
-        toast("Reset email dispatched", { body: `Instructions sent to ${email}`, tone: "success" });
-      } else {
-        toast("Password recovery simulated", {
-          body: `Supabase keys not yet set in .env. Password reset recorded for ${email}.`,
-          tone: "info",
-        });
+      if (!isSupabaseConfigured) {
+        throw new Error("Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
       }
+      await remoteResetPassword(email);
+      toast("Reset email dispatched", { body: `Instructions sent to ${email}`, tone: "success" });
     },
     [toast]
   );
+
+  const loadStarterSample = useCallback(async () => {
+    const currentUserId = state.user.id;
+    const starter = seedAnalyses();
+    const starterReports = seedReports();
+    mutate((s) => ({
+      ...s,
+      analyses: starter,
+      reports: starterReports,
+    }));
+    if (currentUserId && isSupabaseConfigured) {
+      for (const an of starter) {
+        await upsertRemoteAnalysis(an, currentUserId);
+      }
+      for (const rep of starterReports) {
+        await saveRemoteReport(rep, currentUserId);
+      }
+      toast("Starter workspace loaded", {
+        body: "Sample analysis saved to your private database.",
+        tone: "success",
+      });
+    }
+  }, [mutate, state.user.id, toast]);
 
   const store: AppStore = useMemo(
     () => ({
@@ -366,12 +433,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         "cb1_4twj_1_0b4244f0717161156a2b678e"
       ),
       isLoading,
+      isAuthReady,
       toast,
       dismissToast,
       signIn,
+      signInWithGoogle,
       signUp,
       signOut,
       resetPassword,
+      loadStarterSample,
       completeOnboarding: () => mutate((s) => ({ ...s, onboarded: true })),
       resetOnboarding: () => mutate((s) => ({ ...s, onboarded: false })),
       updateUser: (patch) => {

@@ -153,6 +153,7 @@ export interface UserProfile {
   email: string;
   role: string;
   org: string;
+  avatarUrl?: string;
   scoringWeights?: ScoringWeights;
 }
 

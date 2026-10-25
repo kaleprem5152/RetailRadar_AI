@@ -10,12 +10,16 @@ create table if not exists public.profiles (
   id uuid references auth.users(id) on delete cascade primary key,
   email text not null,
   name text not null,
+  avatar_url text default '',
   role text default 'Retail Entrepreneur',
   org text default 'Independent',
   scoring_weights jsonb default '{"D": 0.30, "C": 0.20, "A": 0.20, "R": 0.20, "P": 0.10}'::jsonb,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
+
+-- Migration check in case profiles already exists
+alter table public.profiles add column if not exists avatar_url text default '';
 
 -- 2. ANALYSES TABLE
 create table if not exists public.analyses (
@@ -229,17 +233,20 @@ create policy "Users can delete own saved reports" on public.saved_reports
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, email, name, role, org)
+  insert into public.profiles (id, email, name, avatar_url, role, org)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'picture', ''),
     coalesce(new.raw_user_meta_data->>'role', 'Retail Entrepreneur'),
     coalesce(new.raw_user_meta_data->>'org', 'Independent')
   )
   on conflict (id) do update set
     email = excluded.email,
-    name = excluded.name;
+    name = coalesce(excluded.name, public.profiles.name),
+    avatar_url = coalesce(nullif(excluded.avatar_url, ''), public.profiles.avatar_url),
+    updated_at = timezone('utc'::text, now());
   return new;
 end;
 $$ language plpgsql security definer;

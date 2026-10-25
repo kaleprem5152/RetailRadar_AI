@@ -122,11 +122,19 @@ export function UserChip() {
         className="flex items-center gap-2.5 rounded-lg border border-line bg-ink-800/60 py-1.5 pl-1.5 pr-3 transition-colors hover:border-line-strong"
         aria-expanded={open}
       >
-        <span className="flex size-7 items-center justify-center rounded-md bg-brass-500/15 font-mono text-[10.5px] font-semibold text-brass-300">
-          {initials}
-        </span>
+        {user.avatarUrl ? (
+          <img
+            src={user.avatarUrl}
+            alt={user.name}
+            className="size-7 rounded-md object-cover ring-1 ring-brass-400/30"
+          />
+        ) : (
+          <span className="flex size-7 items-center justify-center rounded-md bg-brass-500/15 font-mono text-[10.5px] font-semibold text-brass-300">
+            {initials}
+          </span>
+        )}
         <span className="hidden text-left sm:block">
-          <span className="block text-[12px] font-medium leading-tight text-bone-100">{user.name}</span>
+          <span className="block text-[12px] font-medium leading-tight text-bone-100">{user.name || "Authenticated User"}</span>
           <span className="block text-[10.5px] leading-tight text-bone-500">
             {isCloudConnected ? "Supabase Cloud" : "Local DB"}
           </span>

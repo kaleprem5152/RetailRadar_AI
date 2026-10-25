@@ -52,6 +52,23 @@ export async function remoteSignIn(email: string, password: string) {
   return data;
 }
 
+export async function remoteSignInWithGoogle() {
+  if (!supabase) throw new Error("Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.");
+  const redirectTo = window.location.origin;
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo,
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
+      },
+    },
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function remoteSignOut() {
   if (!supabase) return;
   const { error } = await supabase.auth.signOut();
@@ -350,21 +367,109 @@ export async function fetchRemoteProfile(userId: string): Promise<UserProfile | 
     .from("profiles")
     .select("*")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (!data) return null;
   return {
+    id: data.id,
     name: data.name,
     email: data.email,
     role: data.role || "Retail Entrepreneur",
     org: data.org || "Independent",
+    avatarUrl: data.avatar_url || "",
   };
+}
+
+export async function ensureRemoteProfile(user: User): Promise<UserProfile> {
+  const meta = user.user_metadata || {};
+  const name =
+    meta.full_name ||
+    meta.name ||
+    user.email?.split("@")[0] ||
+    "Retail Explorer";
+  const avatarUrl = meta.avatar_url || meta.picture || "";
+  const role = meta.role || "Retail Entrepreneur";
+  const org = meta.org || "Independent";
+
+  if (!supabase) {
+    return {
+      id: user.id,
+      name,
+      email: user.email || "",
+      avatarUrl,
+      role,
+      org,
+    };
+  }
+
+  try {
+    const { data: existing, error: fetchErr } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (existing && !fetchErr) {
+      return {
+        id: existing.id,
+        name: existing.name || name,
+        email: existing.email || user.email || "",
+        avatarUrl: existing.avatar_url || avatarUrl,
+        role: existing.role || role,
+        org: existing.org || org,
+      };
+    }
+
+    const profileRecord = {
+      id: user.id,
+      email: user.email || "",
+      name,
+      avatar_url: avatarUrl,
+      role,
+      org,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: inserted, error: insertErr } = await supabase
+      .from("profiles")
+      .upsert(profileRecord)
+      .select()
+      .maybeSingle();
+
+    if (insertErr) {
+      console.warn("Notice: profile persistence handled via schema trigger/RLS:", insertErr.message);
+    }
+
+    return {
+      id: user.id,
+      name: inserted?.name || name,
+      email: inserted?.email || user.email || "",
+      avatarUrl: inserted?.avatar_url || avatarUrl,
+      role: inserted?.role || role,
+      org: inserted?.org || org,
+    };
+  } catch (err) {
+    console.warn("ensureRemoteProfile exception:", err);
+    return {
+      id: user.id,
+      name,
+      email: user.email || "",
+      avatarUrl,
+      role,
+      org,
+    };
+  }
 }
 
 export async function updateRemoteProfile(userId: string, patch: Partial<UserProfile>) {
   if (!supabase) return;
-  await supabase.from("profiles").update({
-    ...patch,
+  const dbPatch: Record<string, any> = {
     updated_at: new Date().toISOString(),
-  }).eq("id", userId);
+  };
+  if (patch.name !== undefined) dbPatch.name = patch.name;
+  if (patch.role !== undefined) dbPatch.role = patch.role;
+  if (patch.org !== undefined) dbPatch.org = patch.org;
+  if (patch.avatarUrl !== undefined) dbPatch.avatar_url = patch.avatarUrl;
+
+  await supabase.from("profiles").update(dbPatch).eq("id", userId);
 }

@@ -10,7 +10,7 @@ import { rankLocations } from "../lib/scoring";
 import { cn, timeAgo } from "../lib/utils";
 
 export function Dashboard() {
-  const { analyses, reports, user, isCloudConnected } = useApp();
+  const { analyses, reports, user, isCloudConnected, loadStarterSample } = useApp();
 
   // Aggregate stats across real saved analyses
   const activeAnalyses = useMemo(() => analyses.filter((a) => a.status === "active"), [analyses]);
@@ -40,11 +40,11 @@ export function Dashboard() {
               Location Intelligence Operations
             </span>
             <span className="rounded bg-ink-800 px-2 py-0.5 text-[10px] font-mono text-bone-400 border border-line">
-              {isCloudConnected ? "PostgreSQL Active" : "Local Workspace"}
+              {isCloudConnected ? "Supabase PostgreSQL Active" : "Local Workspace"}
             </span>
           </div>
           <h1 className="font-display mt-2 text-[28px] font-light tracking-tight text-bone-100">
-            Welcome back, {user.name.split(" ")[0]}.
+            Welcome back, {user.name ? user.name.split(" ")[0] : "Explorer"}.
           </h1>
           <p className="mt-1 text-[13px] text-bone-400">
             {analyses.length} active location {analyses.length === 1 ? "project" : "projects"} under commercial evaluation. {pendingChecks.length} pre-investment audit tasks pending.
@@ -131,6 +131,25 @@ export function Dashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-line/60 text-bone-300">
+              {analyses.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-bone-400">
+                    <Compass size={28} className="mx-auto text-brass-400 opacity-60 mb-2" />
+                    <p className="text-[14px] font-medium text-bone-200">No location projects in your account yet</p>
+                    <p className="text-[12px] text-bone-500 mt-1 max-w-sm mx-auto">
+                      Start evaluating your first retail candidate site, or load the Indiranagar starter scenario to see the scoring engine in action.
+                    </p>
+                    <div className="mt-4 flex items-center justify-center gap-3">
+                      <Button to="/app/analyses/new" size="sm">
+                        <Plus size={14} /> Start New Analysis
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => loadStarterSample()}>
+                        Load Starter Sample
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              )}
               {analyses.map((a) => {
                 const ranked = rankLocations(a);
                 const lead = ranked[0];
