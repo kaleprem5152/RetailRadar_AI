@@ -45,7 +45,7 @@ export default function Landing() {
 /* ── 1 · Hero ────────────────────────────────────────────── */
 function Hero() {
   return (
-    <section className="relative min-h-[100svh]">
+    <section className="relative min-h-[100svh] w-full overflow-hidden">
       <div className="grid-paper absolute inset-0" aria-hidden />
       <div
         className="absolute inset-0"
@@ -56,7 +56,7 @@ function Hero() {
         }}
       />
       {/* 3D diorama */}
-      <div className="absolute inset-y-0 right-0 w-full lg:w-[62%]">
+      <div className="absolute inset-y-0 right-0 w-full lg:w-[62%] overflow-hidden pointer-events-none">
         <CityScene className="h-full w-full opacity-70 lg:opacity-100" />
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-ink-900 via-ink-900/35 to-transparent lg:via-ink-900/10" />
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-ink-900 to-transparent" />
@@ -72,7 +72,7 @@ function Hero() {
         </div>
       </div>
 
-      <div className="relative mx-auto flex min-h-[100svh] max-w-7xl flex-col justify-center px-5 pb-28 pt-32 lg:px-8">
+      <div className="relative mx-auto flex min-h-[100svh] max-w-[1440px] flex-col justify-center px-6 pb-28 pt-32 lg:px-12">
         <Reveal>
           <div className="flex items-center gap-2.5">
             <Badge tone="brass" className="rounded-full px-3 py-1">
@@ -168,7 +168,7 @@ function TickerStrip() {
 /* ── 2 · Problem ─────────────────────────────────────────── */
 function Problem() {
   return (
-    <section className="relative mx-auto max-w-7xl px-5 py-28 lg:px-8 lg:py-36">
+    <section className="relative mx-auto max-w-[1440px] px-6 py-28 lg:px-12 lg:py-36">
       <div className="grid gap-14 lg:grid-cols-[1.15fr_1fr] lg:gap-20">
         <div>
           <Reveal><Eyebrow>The problem</Eyebrow></Reveal>
@@ -235,7 +235,7 @@ function HowItWorks() {
   ];
   return (
     <section className="border-y border-line bg-ink-950/60">
-      <div className="mx-auto max-w-7xl px-5 py-28 lg:px-8 lg:py-32">
+      <div className="mx-auto max-w-[1440px] px-6 py-28 lg:px-12 lg:py-32">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <Reveal><Eyebrow>Method</Eyebrow></Reveal>
@@ -275,7 +275,7 @@ function MarketShowcase() {
   const [selected, setSelected] = useState(DEMO.locations[1].id);
   const loc = DEMO.locations.find((l) => l.id === selected)!;
   return (
-    <section className="mx-auto max-w-7xl px-5 py-28 lg:px-8 lg:py-36">
+    <section className="mx-auto max-w-[1440px] px-6 py-28 lg:px-12 lg:py-36">
       <div className="grid items-center gap-14 lg:grid-cols-[1fr_1.35fr] lg:gap-16">
         <div>
           <Reveal><Eyebrow>Market explorer</Eyebrow></Reveal>
@@ -376,7 +376,7 @@ function FinanceShowcase() {
 
   return (
     <section className="relative border-y border-line bg-ink-950/60">
-      <div className="mx-auto max-w-7xl px-5 py-28 lg:px-8 lg:py-36">
+      <div className="mx-auto max-w-[1440px] px-6 py-28 lg:px-12 lg:py-36">
         <div className="grid items-center gap-14 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
           <Reveal>
             <Panel className="relative overflow-hidden p-0">
@@ -481,7 +481,7 @@ function DecisionShowcase() {
   const scores = scoreAnalysis(DEMO);
   const lead = scores[1]; // Nanthoor — strongest
   return (
-    <section className="mx-auto max-w-7xl px-5 py-28 lg:px-8 lg:py-36">
+    <section className="mx-auto max-w-[1440px] px-6 py-28 lg:px-12 lg:py-36">
       <div className="grid items-center gap-14 lg:grid-cols-[1fr_1.2fr] lg:gap-16">
         <div>
           <Reveal><Eyebrow>Decision intelligence</Eyebrow></Reveal>
@@ -552,7 +552,7 @@ function TruthShowcase() {
   const records = DEMO.locations[0].nearby.slice(0, 5);
   return (
     <section className="relative border-y border-line bg-ink-950/60">
-      <div className="mx-auto max-w-7xl px-5 py-28 lg:px-8 lg:py-36">
+      <div className="mx-auto max-w-[1440px] px-6 py-28 lg:px-12 lg:py-36">
         <div className="grid items-center gap-14 lg:grid-cols-[1.25fr_1fr] lg:gap-16">
           <Reveal>
             <Panel pad={false} className="overflow-hidden">
@@ -635,7 +635,7 @@ function SampleComparison() {
     ["Open questions", String(score.missing.length)],
   ];
   return (
-    <section className="mx-auto max-w-7xl px-5 py-28 lg:px-8 lg:py-36">
+    <section className="mx-auto max-w-[1440px] px-6 py-28 lg:px-12 lg:py-36">
       <Reveal className="text-center">
         <div className="flex items-center justify-center gap-3">
           <span className="h-px w-8 bg-brass-500/60" />

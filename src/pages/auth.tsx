@@ -40,9 +40,17 @@ function AuthShell({ title, sub, children }: { title: string; sub: string; child
         style={{ background: "radial-gradient(700px 420px at 50% 0%, rgba(217,164,65,0.08), transparent 65%)" }}
       />
       <div className="relative w-full max-w-md">
-        <Link to="/" className="mb-8 inline-flex transition-opacity hover:opacity-85">
-          <Wordmark />
-        </Link>
+        <div className="mb-6 flex items-center justify-between">
+          <Link to="/" className="inline-flex transition-opacity hover:opacity-85">
+            <Wordmark />
+          </Link>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-ink-800/80 px-3 py-1.5 text-[12px] font-medium text-bone-300 transition-colors hover:border-bone-400 hover:text-bone-100"
+          >
+            <ArrowLeft size={13} /> Back to website
+          </Link>
+        </div>
         <div
           className="rounded-2xl border border-line-strong bg-ink-850/90 p-7 shadow-[var(--shadow-pop)] backdrop-blur sm:p-9"
           style={{ animation: "rise .5s cubic-bezier(.22,1,.36,1) both" }}
@@ -192,6 +200,14 @@ export function SignInPage() {
         <Button className="w-full" size="lg" loading={busy} onClick={submit}>
           Sign in <ArrowRight size={15} />
         </Button>
+        <div className="pt-2 text-center border-t border-line/60">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-[12px] text-bone-500 hover:text-bone-200 transition-colors"
+          >
+            <ArrowLeft size={12} /> Return to landing page
+          </Link>
+        </div>
       </div>
     </AuthShell>
   );
@@ -331,6 +347,14 @@ export function CreateAccountPage() {
             Sign in
           </Link>
         </p>
+        <div className="pt-2 text-center border-t border-line/60">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1.5 text-[12px] text-bone-500 hover:text-bone-200 transition-colors"
+          >
+            <ArrowLeft size={12} /> Return to landing page
+          </Link>
+        </div>
       </div>
     </AuthShell>
   );

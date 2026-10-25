@@ -31,7 +31,7 @@ export function Dashboard() {
   const auditLevelPct = totalRecords > 0 ? Math.round((verifiedRecords / totalRecords) * 100) : 0;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10 space-y-8">
+    <div className="mx-auto max-w-[1480px] w-full px-4 py-8 sm:px-6 lg:px-8 lg:py-10 space-y-8">
       {/* ── Executive Header Strip ─────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-line pb-6">
         <div>

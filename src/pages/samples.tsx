@@ -29,7 +29,7 @@ export function SampleAnalysisPage() {
     <main>
       <section className="relative overflow-hidden border-b border-line px-5 pb-16 pt-32 lg:px-8 lg:pt-40">
         <div className="grid-paper absolute inset-0 opacity-50" aria-hidden />
-        <div className="relative mx-auto max-w-7xl">
+        <div className="relative mx-auto max-w-[1440px]">
           <Reveal><Eyebrow>Sample analysis</Eyebrow></Reveal>
           <Reveal delay={70}>
             <h1 className="font-display mt-6 max-w-3xl text-[clamp(2rem,4.6vw,3.2rem)] font-light leading-[1.12] tracking-tight text-bone-100">
@@ -52,7 +52,7 @@ export function SampleAnalysisPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-16 lg:px-8 lg:py-20">
+      <section className="mx-auto max-w-[1440px] px-6 py-16 lg:px-12 lg:py-20">
         {/* verdict cards */}
         <div className="grid gap-4 md:grid-cols-3">
           {scores.map((s) => {

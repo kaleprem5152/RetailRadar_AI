@@ -10,7 +10,7 @@ function MarketingHero({ eyebrow, title, sub }: { eyebrow: string; title: React.
     <section className="relative overflow-hidden border-b border-line px-5 pb-20 pt-36 lg:px-8 lg:pb-24 lg:pt-44">
       <div className="grid-paper absolute inset-0 opacity-50" aria-hidden />
       <div className="absolute inset-0" aria-hidden style={{ background: "radial-gradient(800px 380px at 60% 0%, rgba(217,164,65,0.07), transparent 65%)" }} />
-      <div className="relative mx-auto max-w-7xl">
+      <div className="relative mx-auto max-w-[1440px]">
         <Reveal><Eyebrow>{eyebrow}</Eyebrow></Reveal>
         <Reveal delay={70}>
           <h1 className="font-display mt-6 max-w-3xl text-[clamp(2rem,4.6vw,3.4rem)] font-light leading-[1.1] tracking-tight text-bone-100">{title}</h1>
@@ -65,7 +65,7 @@ export function HowItWorksPage() {
         title={<>Six moves from a shiny listing to a <span className="italic text-brass-300">defensible decision.</span></>}
         sub="RetailRadar AI is deliberately procedural. The process is the product: declare, compare, model, verify, decide."
       />
-      <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28">
+      <section className="mx-auto max-w-[1440px] px-6 py-20 lg:px-12 lg:py-28">
         <ol className="relative space-y-14 before:absolute before:bottom-8 before:left-[22px] before:top-2 before:w-px before:bg-line lg:space-y-20">
           {stages.map((s, i) => (
             <Reveal as="li" key={s.n} delay={i * 40} className="relative grid gap-6 pl-14 lg:grid-cols-[280px_1fr] lg:gap-16 lg:pl-20">
@@ -108,7 +108,7 @@ export function FeaturesPage() {
         title={<>Everything a site decision needs. <span className="italic text-brass-300">Nothing it doesn't.</span></>}
         sub="Nine focused capabilities, one connected flow — from first shortlist to final report."
       />
-      <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28">
+      <section className="mx-auto max-w-[1440px] px-6 py-20 lg:px-12 lg:py-28">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f, i) => (
             <Reveal key={f.t} delay={(i % 3) * 80}>
@@ -151,7 +151,7 @@ export function AboutPage() {
         title={<>Built by people who have <span className="italic text-brass-300">lost money on a lease.</span></>}
         sub="RetailRadar AI is a Triwizathon Round 2 project: a working prototype of the tool a small retailer deserves before signing a multi-year commitment."
       />
-      <section className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-28">
+      <section className="mx-auto max-w-[1440px] px-6 py-20 lg:px-12 lg:py-28">
         <div className="grid gap-14 lg:grid-cols-[1fr_1.2fr] lg:gap-20">
           <div>
             <Reveal><Eyebrow>Principles</Eyebrow></Reveal>

@@ -54,7 +54,7 @@ export async function remoteSignIn(email: string, password: string) {
 
 export async function remoteSignInWithGoogle() {
   if (!supabase) throw new Error("Supabase is not configured. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment.");
-  const redirectTo = window.location.origin;
+  const redirectTo = `${window.location.origin}/#/app`;
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {

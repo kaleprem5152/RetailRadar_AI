@@ -216,6 +216,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           reports: remoteRep,
         }));
         setIsAuthReady(true);
+
+        if (event === "SIGNED_IN") {
+          const hash = window.location.hash;
+          const hasAuthParams =
+            window.location.search.includes("code=") ||
+            hash.includes("access_token=") ||
+            hash.includes("refresh_token=");
+
+          if (hasAuthParams || !hash || hash === "#/" || hash === "#/sign-in" || hash === "#/create-account") {
+            if (window.location.search.includes("code=")) {
+              window.history.replaceState({}, document.title, window.location.origin + window.location.pathname + "#/app");
+            }
+            window.location.hash = "#/app";
+          }
+        }
       } else if (event === "SIGNED_OUT") {
         setState((prev) => ({
           ...prev,

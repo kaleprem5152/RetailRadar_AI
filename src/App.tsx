@@ -1,7 +1,7 @@
-import { HashRouter, Route, Routes, useLocation } from "react-router-dom";
+import { HashRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Compass } from "lucide-react";
-import { AppProvider } from "./store/AppStore";
+import { AppProvider, useApp } from "./store/AppStore";
 import { ToastViewport, Button } from "./components/ui";
 import MarketingShell from "./shell/Marketing";
 import AppShell from "./shell/AppShell";
@@ -28,6 +28,30 @@ function ScrollToTop() {
   return null;
 }
 
+function OAuthRedirectHandler() {
+  const { session, isAuthReady } = useApp();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isAuthReady) return;
+
+    const hasAuthParams =
+      window.location.search.includes("code=") ||
+      window.location.hash.includes("access_token=") ||
+      window.location.hash.includes("refresh_token=");
+
+    if (session && (hasAuthParams || location.pathname === "/sign-in" || location.pathname === "/create-account")) {
+      if (window.location.search.includes("code=")) {
+        window.history.replaceState({}, document.title, window.location.origin + window.location.pathname + "#/app");
+      }
+      navigate("/app", { replace: true });
+    }
+  }, [session, isAuthReady, location.pathname, navigate]);
+
+  return null;
+}
+
 function NotFound() {
   return (
     <div className="grid min-h-screen place-items-center bg-ink-900 px-5">
@@ -51,6 +75,7 @@ export default function App() {
     <AppProvider>
       <HashRouter>
         <ScrollToTop />
+        <OAuthRedirectHandler />
         <Routes>
           {/* Public marketing site */}
           <Route element={<MarketingShell />}>

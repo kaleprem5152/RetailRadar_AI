@@ -37,7 +37,7 @@ export function MarketingNav() {
         scrolled ? "border-b border-line bg-ink-950/85 backdrop-blur-xl" : "border-b border-transparent"
       )}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
+      <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-6 lg:px-12">
         <Link to="/" aria-label="RetailRadar AI home" className="transition-opacity hover:opacity-85">
           <Wordmark />
         </Link>
@@ -100,7 +100,7 @@ export function MarketingNav() {
 export function MarketingFooter() {
   return (
     <footer className="relative border-t border-line bg-ink-950">
-      <div className="mx-auto max-w-7xl px-5 py-14 lg:px-8">
+      <div className="mx-auto max-w-[1440px] px-6 py-14 lg:px-12">
         <div className="grid gap-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <Wordmark />
@@ -172,7 +172,7 @@ export default function MarketingShell() {
     window.scrollTo(0, 0);
   }, [pathname]);
   return (
-    <div className="min-h-screen bg-ink-900">
+    <div className="min-h-screen bg-ink-900 overflow-x-hidden w-full">
       <MarketingNav />
       <Outlet />
       <MarketingFooter />
