@@ -178,6 +178,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             analyses: remoteAn,
             reports: remoteRep,
           }));
+
+          const curHash = window.location.hash;
+          const search = window.location.search || "";
+          const hasOAuthParams =
+            search.includes("code=") ||
+            search.includes("error=") ||
+            curHash.includes("access_token=") ||
+            curHash.includes("refresh_token=");
+
+          if (hasOAuthParams || !curHash || curHash === "#" || curHash === "#/" || curHash === "#/sign-in" || curHash === "#/create-account") {
+            if (search.includes("code=") || search.includes("error=")) {
+              window.history.replaceState({}, document.title, window.location.origin + window.location.pathname + "#/app");
+            }
+            window.location.hash = "#/app";
+          }
         } else if (mounted) {
           setState((prev) => ({
             ...prev,
@@ -217,15 +232,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }));
         setIsAuthReady(true);
 
-        if (event === "SIGNED_IN") {
+        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
           const hash = window.location.hash;
+          const search = window.location.search || "";
           const hasAuthParams =
-            window.location.search.includes("code=") ||
+            search.includes("code=") ||
+            search.includes("error=") ||
             hash.includes("access_token=") ||
             hash.includes("refresh_token=");
 
-          if (hasAuthParams || !hash || hash === "#/" || hash === "#/sign-in" || hash === "#/create-account") {
-            if (window.location.search.includes("code=")) {
+          if (hasAuthParams || !hash || hash === "#" || hash === "#/" || hash === "#/sign-in" || hash === "#/create-account") {
+            if (search.includes("code=") || search.includes("error=")) {
               window.history.replaceState({}, document.title, window.location.origin + window.location.pathname + "#/app");
             }
             window.location.hash = "#/app";
@@ -326,6 +343,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             analyses: remoteAn,
             reports: remoteRep,
           }));
+          setIsAuthReady(true);
           toast("Signed in to Supabase Cloud", { body: `Logged in as ${email}`, tone: "success" });
           return;
         }

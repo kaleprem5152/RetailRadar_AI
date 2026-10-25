@@ -128,7 +128,8 @@ export function SignInPage() {
     setBusy(true);
     try {
       await signIn(email, password);
-      nav("/app");
+      window.location.hash = "#/app";
+      nav("/app", { replace: true });
     } catch (err: any) {
       setErrors({ general: err.message || "Failed to sign in. Please verify your credentials." });
     } finally {
@@ -258,7 +259,8 @@ export function CreateAccountPage() {
     try {
       const res = await signUp(form.email, form.password, form.name, form.org);
       if (res?.session) {
-        nav("/app/onboarding");
+        window.location.hash = "#/app/onboarding";
+        nav("/app/onboarding", { replace: true });
       } else {
         // Email verification needed
         nav("/sign-in");

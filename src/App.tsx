@@ -28,7 +28,7 @@ function ScrollToTop() {
   return null;
 }
 
-function OAuthRedirectHandler() {
+function AuthRedirectHandler() {
   const { session, isAuthReady } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,13 +36,20 @@ function OAuthRedirectHandler() {
   useEffect(() => {
     if (!isAuthReady) return;
 
+    const search = window.location.search || "";
+    const hash = window.location.hash || "";
     const hasAuthParams =
-      window.location.search.includes("code=") ||
-      window.location.hash.includes("access_token=") ||
-      window.location.hash.includes("refresh_token=");
+      search.includes("code=") ||
+      search.includes("error=") ||
+      hash.includes("access_token=") ||
+      hash.includes("refresh_token=");
 
-    if (session && (hasAuthParams || location.pathname === "/sign-in" || location.pathname === "/create-account")) {
-      if (window.location.search.includes("code=")) {
+    // When authenticated, ensure user is immediately taken to workspace instead of landing or sign-in
+    const publicEntryPaths = ["/", "/sign-in", "/create-account"];
+    const isPublicEntry = publicEntryPaths.includes(location.pathname);
+
+    if (session && (isPublicEntry || hasAuthParams)) {
+      if (search.includes("code=") || search.includes("error=")) {
         window.history.replaceState({}, document.title, window.location.origin + window.location.pathname + "#/app");
       }
       navigate("/app", { replace: true });
@@ -75,7 +82,7 @@ export default function App() {
     <AppProvider>
       <HashRouter>
         <ScrollToTop />
-        <OAuthRedirectHandler />
+        <AuthRedirectHandler />
         <Routes>
           {/* Public marketing site */}
           <Route element={<MarketingShell />}>

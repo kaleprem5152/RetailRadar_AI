@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Navigate } from "react-router-dom";
 import {
   ArrowRight, ArrowUpRight, BadgeCheck, Banknote, CircleHelp, ClipboardCheck, Footprints,
   Landmark, Layers, MapPin, Play, Radar as RadarIcon, Scale, ShieldAlert, Store, TrendingUp,
@@ -11,6 +12,7 @@ import { seedAnalyses } from "../data/seed";
 import { computeFeasibility } from "../lib/finance";
 import { scoreAnalysis } from "../lib/scoring";
 import { fmtINR, fmtINRCompact, fmtNum, DEMO_TAG, cn } from "../lib/utils";
+import { useApp } from "../store/AppStore";
 
 const DEMO = seedAnalyses()[0];
 
@@ -26,6 +28,13 @@ const TICKER = [
 ];
 
 export default function Landing() {
+  const { session, isAuthReady } = useApp();
+
+  // If user is logged in, redirect directly to workspace
+  if (isAuthReady && session) {
+    return <Navigate to="/app" replace />;
+  }
+
   return (
     <main className="overflow-hidden">
       <Hero />
